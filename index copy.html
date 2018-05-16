@@ -1,0 +1,162 @@
+<html>
+<head>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<script src="https://www.gstatic.com/firebasejs/5.0.2/firebase.js"></script>
+<script>
+  // Initialize Firebase
+  var config = {
+    apiKey: "AIzaSyBRtvIyVdb3TUlgyJYh7JkJO6ww6q6vlfk",
+    authDomain: "kult-4c228.firebaseapp.com",
+    databaseURL: "https://kult-4c228.firebaseio.com",
+    projectId: "kult-4c228",
+    storageBucket: "kult-4c228.appspot.com",
+    messagingSenderId: "923873818676"
+  };
+  firebase.initializeApp(config);
+</script>
+<header id="head">
+     <nav id="naav">
+        <button class="knapp"><a href="index.html">Elevside</a></button>
+        <button class="knapp"><a href="../Admin.html">Admin</a></button>
+    </nav>
+        </header>
+<h1>Elev side</h1>
+<h2>Fyll inn skjema:</h2>
+<form id="skjema">
+    <label>Navn: <input id="inpNavn" type="text"></label>
+    <label>Lag: <input id="inpLag" type="text"></label>
+<!--    <label>Skole: <input id="inpSkole" type="text"></label> -->
+    <label>Skole: <select id="inpSkole"></select></label>
+    <label>Idrett: <select id="inpIdrett"></select></label>
+    <button type="submit">Send inn</button>
+</form>
+
+<h2>Deltagere:</h2>
+
+<label>Se deltagere i de forskjellig idrettene: <select id="inpVisIdrett" onchange="visIdrett()">
+    <option value="1">Håndball</option>
+    <option value="2">Fotball</option>
+    <option value="3">Golf</option>
+</select>
+</label>
+<table>
+    <tr><th>Navn</th><th>Lag</th><th>Skole</th><th>Idrett</th></tr>
+    <tbody id="txtTabell"></tbody>
+</table>
+<script>
+    // HTML objekter
+    var inpNavn = document.getElementById("inpNavn");
+    var inpLag = document.getElementById("inpLag");
+    var inpSkole = document.getElementById("inpSkole");
+    var inpIdrett = document.getElementById("inpIdrett");
+    var skjema = document.getElementById("skjema");
+    var txtTabell = document.getElementById("txtTabell");
+
+    // Database objekter
+    var database = firebase.database();
+    var timebestilling = database.ref("timebestilling2");
+    var idrett = database.ref("idrett");
+
+    // Lytter funksjon for leger-databasen
+    function hentIdrett(snapshot){
+        var idrettNoekkel = snapshot.key;
+        var idrettInfo = snapshot.val();
+        
+        inpIdrett.innerHTML += `<option value="${idrettNoekkel}">${idrettInfo.navn}</option>`;
+    }
+    
+    // lytterfunksjon til send inn hendelse
+    function registrereTimebestilling(event){
+        event.preventDefault();
+        
+        // Henter ut verdiene til input-feltene
+        var navn = inpNavn.value;
+        var lag = inpLag.value;
+        var skole = inpSkole.value;
+        var idrett = inpIdrett.value;
+        
+        // Nullstiller verdiene til inputfeltene
+        inpNavn.value = "";
+        inpLag.value = "";
+        inpSkole.value = "";
+        inpIdrett.value = "";
+        
+        // Registrerer timebstillingen i databasen timebestilling1
+        timebestilling.push({
+            "navn" : navn,
+            "lag" : lag,
+            "skole" : skole,
+            "idrett" : idrett
+        });    
+    }
+    
+    // Lytterfunksjon til at noe blir lagt til i firebase timebestilling1
+    function hentTimebestilling(snapshot){
+        var nyTime = snapshot.val();
+        // console.log("nyTime", nyTime);
+        var idrettRef = database.ref("idrett/" + nyTime.idrett);
+        idrettRef.on("value", function(snapshotIdrett) {
+            var idrettObj = snapshotIdrett.val();
+            // console.log("idrettObj", idrettObj);
+            txtTabell.innerHTML += `<tr><td>${nyTime.navn}</td><td>${nyTime.lag}</td><td>${nyTime.skole}</td><td>${idrettObj.navn}</td></tr>`;
+        });
+    }
+    
+    // Lytter funksjon for å vise bare bestillinger fra leger Arne
+    function visHandball(){
+        txtTabell.innerHTML = "";
+        timebestilling
+          .orderByChild("idrett")
+          .equalTo("1")
+          .on("child_added", hentTimebestilling);    
+    }
+    
+    // Lytter funksjon for å vise bare bestillinger fra leger Sonja
+    function visFotball(){
+        txtTabell.innerHTML = "";
+        timebestilling
+          .orderByChild("idrett")
+          .equalTo("2")
+          .on("child_added", hentTimebestilling);    
+    }
+
+    // lytter på golf
+     function visGolf(){
+        txtTabell.innerHTML = "";
+        timebestilling
+          .orderByChild("idrett")
+          .equalTo("3")
+          .on("child_added", hentTimebestilling);    
+    }
+    
+    // Lytter funksjon for å vise alle
+    function visAlleBestillinger(){
+        txtTabell.innerHTML = "";
+        timebestilling
+          .on("child_added", hentTimebestilling);    
+    }
+    
+    // Viser Idrett
+    function visIdrett(){
+        var inpVisIdrett = document.getElementById("inpVisIdrett");
+        var idrettNoekkel = inpVisIdrett.value;
+        
+        txtTabell.innerHTML = "";
+        timebestilling
+          .orderByChild("idrett")
+          .equalTo(idrettNoekkel)
+          .on("child_added", hentTimebestilling);    
+    }
+    
+    // Registrerer lytterfunksjonen til skjemaet
+    skjema.onsubmit = registrereTimebestilling;
+    
+    // Registrer lytterfunksjonen til firebase
+    timebestilling.on("child_added", hentTimebestilling);
+    idrett.on("child_added", hentIdrett);
+    
+</script>
+</body>
+</html>
